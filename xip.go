@@ -44,6 +44,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strings"
 	"syscall"
 
 	"github.com/kelseyhightower/envconfig"
@@ -74,7 +75,7 @@ type Config struct {
 
 var (
 	config    Config
-	ipPattern = regexp.MustCompile(`(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})`)
+	ipPattern = regexp.MustCompile(`(\b\d{1,3}[\.-]\d{1,3}[\.-]\d{1,3}[\.-]\d{1,3})`)
 	defaultIP net.IP
 )
 
@@ -144,19 +145,41 @@ func handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 	}
 
 	q := r.Question[0]
-	t := dnsTXT(clientString(w.RemoteAddr()))
+	//	t := dnsTXT(clientString(w.RemoteAddr()))
 	rr := dnsRR(q.Name)
 
+	soa := &dns.SOA{
+		Hdr: dns.RR_Header{
+			Name:   config.Fqdn,
+			Rrtype: dns.TypeSOA,
+			Class:  dns.ClassINET,
+			Ttl:    1440,
+		},
+		Ns:      config.Fqdn,
+		Serial:  2014123101,
+		Mbox:    config.Fqdn,
+		Refresh: 21600,
+		Retry:   7200,
+		Expire:  604800,
+		Minttl:  3600,
+	}
+
 	switch q.Qtype {
-	case dns.TypeTXT:
-		m.Answer = append(m.Answer, t)
-		m.Extra = append(m.Extra, rr)
+	// case dns.TypeTXT:
+	// 	//m.Answer = append(m.Answer, t)
+	// 	m.Extra = append(m.Extra, rr)
 	default:
 		fallthrough
-	case dns.TypeAAAA, dns.TypeA:
-		m.Answer = append(m.Answer, rr)
-		m.Extra = append(m.Extra, t)
+	// Start of Authority
+	case dns.TypeSOA:
+		m.Answer = append(m.Answer, soa)
 
+	// A, AAAA & CNAME questions
+	case dns.TypeAAAA, dns.TypeA, dns.TypeCNAME:
+		m.Answer = append(m.Answer, rr)
+		//m.Extra = append(m.Extra, t)
+
+	// Transfer questions
 	case dns.TypeAXFR, dns.TypeIXFR:
 		c := make(chan *dns.Envelope)
 		tr := new(dns.Transfer)
@@ -171,23 +194,7 @@ func handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 			return
 		}
 
-		soa := &dns.SOA{
-			Hdr: dns.RR_Header{
-				Name:   config.Fqdn,
-				Rrtype: dns.TypeSOA,
-				Class:  dns.ClassINET,
-				Ttl:    1440,
-			},
-			Ns:      config.Fqdn,
-			Serial:  2014123101,
-			Mbox:    config.Fqdn,
-			Refresh: 21600,
-			Retry:   7200,
-			Expire:  604800,
-			Minttl:  3600,
-		}
-
-		c <- &dns.Envelope{RR: []dns.RR{soa, t, rr, soa}}
+		c <- &dns.Envelope{RR: []dns.RR{soa, rr, soa}}
 		w.Hijack()
 
 		return
@@ -216,6 +223,17 @@ func newServer(addr, net string) *dns.Server {
 	}
 }
 
+func dnsSOA(name string, ns string) (soa *dns.SOA) {
+	return &dns.SOA{
+		Hdr: dns.RR_Header{
+			Name:   name,
+			Rrtype: dns.TypeSOA,
+			Class:  dns.ClassINET,
+			Ttl:    300,
+		},
+		Ns: ns}
+}
+
 func dnsRR(name string) (rr *dns.A) {
 	rr = &dns.A{
 		Hdr: dns.RR_Header{
@@ -228,32 +246,8 @@ func dnsRR(name string) (rr *dns.A) {
 	}
 
 	if ipStr := ipPattern.FindString(name); ipStr != "" {
+		ipStr = strings.ReplaceAll(ipStr, "-", ".")
 		rr.A = net.ParseIP(ipStr).To4()
 	}
-
 	return rr
-}
-
-func dnsTXT(s string) *dns.TXT {
-	return &dns.TXT{
-		Hdr: dns.RR_Header{
-			Name:   config.Fqdn,
-			Rrtype: dns.TypeTXT,
-			Class:  dns.ClassINET,
-			Ttl:    0,
-		},
-		Txt: []string{"Client: " + s},
-	}
-}
-
-func clientString(a net.Addr) string {
-	if ip, ok := a.(*net.UDPAddr); ok {
-		return ip.String() + " (udp)"
-	}
-
-	if ip, ok := a.(*net.TCPAddr); ok {
-		return ip.String() + " (tcp)"
-	}
-
-	return "unknown"
 }

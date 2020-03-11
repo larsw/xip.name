@@ -11,6 +11,9 @@ A simple wildcard DNS inspired by [xip.io](http://xip.io/)
     www.10.0.0.2.xip.name  resolves to  10.0.0.2
     foo.10.0.0.3.xip.name  resolves to  10.0.0.3
 bar.baz.10.0.0.4.xip.name  resolves to  10.0.0.4
+
+        10-0-0-5.xip.name  resolves to  10.0.0.5
+    www.10-0-0-6.xip.name  resolves to  10.0.0.6
 ```
 
 ## How does it work?

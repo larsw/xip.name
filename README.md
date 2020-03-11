@@ -1,8 +1,7 @@
 [xip.name](http://xip.name/)
 ========
 
-[![Build Status](https://travis-ci.org/peterhellberg/xip.name.svg?branch=master)](https://travis-ci.org/peterhellberg/xip.name)
-[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/peterhellberg/xip.name)
+[![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg?style=flat)](https://godoc.org/github.com/larsw/xip.name)
 [![License BSD](https://img.shields.io/badge/license-BSD-lightgrey.svg?style=flat)](https://github.com/peterhellberg/xip.name/blob/master/LICENSE)
 
 A simple wildcard DNS inspired by [xip.io](http://xip.io/)
@@ -30,3 +29,8 @@ You can also help out by signing up to DigitalOcean using my [referral link](htt
 ## Credits
 
 xip.name is built on top of [Miek](http://miek.nl)’s lovely [dns package](https://github.com/miekg/dns) for Go.
+
+Lars Wilhelmsen made some tiny improvements and added a Dockerfile to produce
+an Alpine-based image hosting xip and website (on nginx) + support for
+configurating xip via environment variables.
+

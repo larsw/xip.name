@@ -39,37 +39,95 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/signal"
 	"regexp"
 	"syscall"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/miekg/dns"
 )
 
-var (
-	verbose = flag.Bool("v", false, "Verbose")
-	fqdn    = flag.String("fqdn", "xip.name.", "FQDN to handle")
-	addr    = flag.String("addr", ":53", "The addr to bind on")
-	ip      = flag.String("ip", "188.166.43.179", "The IP of xip.name")
+// IPDecoder xxx
+type IPDecoder net.IP
 
+// Decode xxx
+func (ipd *IPDecoder) Decode(value string) error {
+	*ipd = IPDecoder(net.ParseIP(value))
+	return nil
+}
+
+// To4 ...
+func (ipd *IPDecoder) To4() net.IP {
+	return net.IP(*ipd).To4()
+}
+
+// Config xxx
+type Config struct {
+	Verbose bool      `default:"false"`
+	Fqdn    string    `default:"xip.name."`
+	Addr    string    `default:":53"`
+	IP      IPDecoder `default:"127.0.0.1"`
+}
+
+var (
+	config    Config
 	ipPattern = regexp.MustCompile(`(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})`)
 	defaultIP net.IP
 )
 
 func main() {
+	fmt.Printf("%s starting up...\n", os.Args[0])
+
+	err := envconfig.Process("XIP", &config)
+
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	verboseFlag := flag.Bool("verbose", false, "Verbose")
+	fqdnFlag := flag.String("fqdn", "xip.name.", "FQDN to handle")
+	addrFlag := flag.String("addr", ":53", "The addr to bind on")
+	ipFlag := flag.String("ip", "127.0.0.1", "The IP of xip.name")
+
 	flag.Parse()
 
-	defaultIP = net.ParseIP(*ip).To4()
+	if *verboseFlag == true {
+		config.Verbose = true
+	}
+
+	if *fqdnFlag != "xip.name." {
+		config.Fqdn = *fqdnFlag
+	}
+
+	if *addrFlag != ":53" {
+		config.Addr = *addrFlag
+	}
+
+	if *ipFlag != "127.0.0.1" {
+		config.IP.Decode(*ipFlag)
+	}
+
+	if config.Verbose {
+		fmt.Printf("Verbose: %v\n", config.Verbose)
+		fmt.Printf("FQDN:    %s\n", config.Fqdn)
+		fmt.Printf("Address: %s\n", config.Addr)
+		fmt.Printf("IP:      %s\n", config.IP.To4())
+	}
+
+	defaultIP = config.IP.To4()
 
 	// Ensure that a FQDN is passed in (often the trailing . is omitted)
-	*fqdn = dns.Fqdn(*fqdn)
+	config.Fqdn = dns.Fqdn(config.Fqdn)
 
-	dns.HandleFunc(*fqdn, handleDNS)
+	dns.HandleFunc(config.Fqdn, handleDNS)
 
-	go serve(*addr, "tcp")
-	go serve(*addr, "udp")
+	go serve(config.Addr, "tcp")
+	go serve(config.Addr, "udp")
+
+	fmt.Println("Ready to receive requests, CTRL-C to shutdown.")
 
 	sig := make(chan os.Signal)
 	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
@@ -106,7 +164,7 @@ func handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 		err := tr.Out(w, r, c)
 		if err != nil {
-			if *verbose {
+			if config.Verbose {
 				fmt.Printf("%v\n", err)
 			}
 
@@ -115,14 +173,14 @@ func handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 
 		soa := &dns.SOA{
 			Hdr: dns.RR_Header{
-				Name:   *fqdn,
+				Name:   config.Fqdn,
 				Rrtype: dns.TypeSOA,
 				Class:  dns.ClassINET,
 				Ttl:    1440,
 			},
-			Ns:      *fqdn,
+			Ns:      config.Fqdn,
 			Serial:  2014123101,
-			Mbox:    *fqdn,
+			Mbox:    config.Fqdn,
 			Refresh: 21600,
 			Retry:   7200,
 			Expire:  604800,
@@ -135,7 +193,7 @@ func handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 		return
 	}
 
-	if *verbose {
+	if config.Verbose {
 		fmt.Printf("%v\n", m.String())
 	}
 
@@ -145,6 +203,8 @@ func handleDNS(w dns.ResponseWriter, r *dns.Msg) {
 func serve(addr, net string) {
 	if err := newServer(addr, net).ListenAndServe(); err != nil {
 		fmt.Printf("Failed to setup the %q server: %s\n", net, err.Error())
+	} else {
+		fmt.Printf("Listening on %q/%s\n", addr, net)
 	}
 }
 
@@ -177,7 +237,7 @@ func dnsRR(name string) (rr *dns.A) {
 func dnsTXT(s string) *dns.TXT {
 	return &dns.TXT{
 		Hdr: dns.RR_Header{
-			Name:   *fqdn,
+			Name:   config.Fqdn,
 			Rrtype: dns.TypeTXT,
 			Class:  dns.ClassINET,
 			Ttl:    0,

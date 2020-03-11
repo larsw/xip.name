@@ -65,9 +65,11 @@ oooooooooooo~88~ooooooooooooooooooooooooooooooooooooooooooooooo
             foo.<span>10.0.0.3</span>.xip.name  resolves to  <span>10.0.0.3</span>
         bar.baz.<span>10.0.0.4</span>.xip.name  resolves to  <span>10.0.0.4</span>
 
-
+                <span>10-0-0-5</span>.xip.name  resolves to  <span>10.0.0.5</span>
+            www.<span>10-0-0-6</span>.xip.name  resolves to  <span>10.0.0.6</span>
+        
         <b>How does it work?</b>
-        xip.name runs a <a href="https://github.com/peterhellberg/xip.name">custom Domain Name Server</a> which
+        xip.name runs a <a href="https://github.com/larsw/xip.name">custom Domain Name Server</a> which
         extracts any IP address found in the requested
         domain name and sends it back in the response.
 
@@ -84,7 +86,6 @@ oooooooooooo~88~ooooooooooooooooooooooooooooooooooooooooooooooo
           Alpine hosting both xip and web site (nginx).
         * Migrated to Go Modules (vendor/ removed.)
       </p>
-      
       </pre>
   </body>
 </html>

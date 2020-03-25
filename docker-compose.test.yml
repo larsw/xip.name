@@ -4,4 +4,7 @@ services:
     build:
       context: .
       target: build
+    environment:
+      - CGO_ENABLED=0
     command: go test
+

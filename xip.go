@@ -1,4 +1,5 @@
 // Copyright 2014-2016 Peter Hellberg.
+// Minor modificaitons by Lars Wilhelmsen (2020).
 // Released under the terms of the MIT license.
 
 // xip.name is a small name server which sends back any IP address found in the provided hostname.

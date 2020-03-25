@@ -14,8 +14,8 @@ func TestHandleDNS(t *testing.T) {
 		n string
 	}{
 		{&fakeResponseWriter{}, &dns.Msg{Question: []dns.Question{
-			dns.Question{Name: "c7.se.", Qtype: dns.TypeMX, Qclass: dns.ClassINET},
-		}}, "c7.se."},
+			dns.Question{Name: "10.10.10.10.xip.name.", Qtype: dns.TypeA, Qclass: dns.ClassINET},
+		}}, "10.10.10.10.xip.name."},
 		{&fakeResponseWriter{}, &dns.Msg{Question: []dns.Question{
 			dns.Question{Name: "xip.name.", Qtype: dns.TypeAAAA, Qclass: dns.ClassINET},
 		}}, "xip.name."},

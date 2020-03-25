@@ -1,16 +1,14 @@
-FROM golang:alpine AS build
+FROM golang:alpine AS build 
 RUN apk add --no-cache curl libcap && \
     curl -L -o upx-3.96-amd64_linux.tar.xz https://github.com/upx/upx/releases/download/v3.96/upx-3.96-amd64_linux.tar.xz && \
     tar xf upx-3.96-amd64_linux.tar.xz && \
     adduser -D -g "" -h "/nonexistent" -s "/sbin/nologin" -H -u 1001 xip
-
 COPY go.mod *.go /go/src/github.com/larsw/xip.name/
 WORKDIR /go/src/github.com/larsw/xip.name/
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o xip xip.go && \
     /go/upx-3.96-amd64_linux/upx ./xip
-
 RUN setcap 'cap_net_bind_service=+ep' ./xip
-    
+
 FROM scratch as minimal
 ARG CREATED 
 ARG COMMIT

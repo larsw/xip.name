@@ -15,12 +15,9 @@ build() {
     --build-arg COMMIT=$(git rev-parse --short HEAD) \
     --build-arg VERSION=$(git describe --tags --always) \
     --target $TARGET \
-    --stream \
-    --squash \
     -t $TAG .
 
   docker tag $TAG "${IMAGE_NAME}:$1-latest"
-
 }
 
 build "minimal"

@@ -1,8 +1,7 @@
 version: '3.7'
-
-sut:
+services:
+  sut:
     build:
       context: .
       target: build
     command: go test
-
